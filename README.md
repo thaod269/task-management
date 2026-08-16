@@ -7,7 +7,25 @@ npm install
 npm run dev      # http://localhost:3000
 ```
 
-`npm run build` produces a fully static export of the route; `npm run typecheck` runs `tsc --noEmit`.
+`npm run build` writes a fully static site to `out/`; `npm run typecheck` runs `tsc --noEmit`.
+
+## Deploying to Firebase Hosting
+
+The app is entirely client-side — no server components fetching data, no route handlers, no middleware — so `next.config.mjs` sets `output: "export"` and the build emits plain HTML/JS that any static host can serve. Firebase Hosting (your `*.web.app` domain) is the cheapest and simplest fit on Google Cloud; its free tier covers a board like this comfortably.
+
+```bash
+npm install -g firebase-tools     # once
+firebase login                    # once
+firebase use --add                # pick your project; writes .firebaserc
+
+npm run deploy                    # next build && firebase deploy --only hosting
+```
+
+That publishes to `https://<project-id>.web.app`. `npm run preview` serves the built site through the Firebase emulator first, so you can check the real `firebase.json` rules (clean URLs, cache headers) before going live.
+
+`firebase.json` is already configured: it serves `out/`, caches the content-hashed `/_next/static/**` bundles for a year as `immutable`, and keeps HTML on `must-revalidate` so a deploy shows up immediately.
+
+**If you later add a backend** — API routes, server-side rendering, or real data instead of the mock store — static export no longer applies. At that point switch to **Firebase App Hosting** or **Cloud Run**, both of which run the Next.js server; remove `output: "export"` from `next.config.mjs` when you do.
 
 ## Features
 

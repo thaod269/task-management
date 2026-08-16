@@ -11,6 +11,10 @@ next-env.d.ts
 # production
 /build
 
+# firebase hosting
+/.firebase/
+firebase-debug.log*
+
 # misc
 .DS_Store
 *.pem
