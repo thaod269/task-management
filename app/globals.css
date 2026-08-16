@@ -1,0 +1,125 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  --font-mono:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
+    monospace;
+
+  /* Micro-interactions used across cards, modals and the team drawer. */
+  --animate-fade-in: fade-in 150ms ease-out;
+  --animate-scale-in: scale-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-slide-in-right: slide-in-right 240ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-slide-up: slide-up 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-pop: pop 220ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes slide-in-right {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes pop {
+    0% {
+      transform: scale(1);
+    }
+    45% {
+      transform: scale(1.14);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased;
+    font-family: var(--font-sans);
+  }
+
+  /* A visible, consistent focus ring for keyboard users only. */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-slate-900;
+  }
+
+  ::selection {
+    @apply bg-slate-900 text-white;
+  }
+}
+
+@layer utilities {
+  /* Slim scrollbars for the horizontally scrolling Kanban surface. */
+  .scrollbar-slim {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-slate-300) transparent;
+  }
+
+  .scrollbar-slim::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+  }
+
+  .scrollbar-slim::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-slim::-webkit-scrollbar-thumb {
+    background-color: var(--color-slate-300);
+    border-radius: 9999px;
+  }
+
+  .scrollbar-slim::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-slate-400);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
