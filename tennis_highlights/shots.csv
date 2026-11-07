@@ -2,7 +2,7 @@
 # ---------------------------------------------------------------------------------
 # One row per shot, in the order they should appear in the reel:
 #
-#   filename, start_time, end_time, shot_label[, focus]
+#   filename, start_time, end_time, shot_label[, focus[, speed]]
 #
 #   filename    file inside ./raw_videos/ (case-insensitive; extension optional)
 #   start_time  just before the shot starts (split step / unit turn)
@@ -12,24 +12,33 @@
 #               (wrap it in "double quotes" if it contains a comma)
 #   focus       optional 0.0-1.0 horizontal crop centre, only used when cropping
 #               (e.g. --vertical): 0 = keep the left edge, 0.5 = centre, 1 = right edge
+#   speed       optional playback speed, 1 = real time (default). Use 0.4 for a smooth
+#               slow-motion replay: repeat a great shot on the next row with a tight window
+#               around contact (about 1 s before to 0.8 s after) and speed 0.4
 #
 # Timestamps: SS, SS.ss, MM:SS, MM:SS.ss or HH:MM:SS. Lines starting with # are ignored.
 # Aim for 4-7 s per shot (including the padding) to keep the reel punchy.
 # ---------------------------------------------------------------------------------
 #
-# STARTER LIST - drafted automatically from the 07 Nov 2026 rallies.
-# Contact times come from the racket-pop in the audio, checked against the video frames;
-# labels and speeds come from the SwingVision stats panel for YOUR shots only (the 86 km/h
-# and 73 km/h readings in Rally_4 are the opponent's balls, so they're left out).
-# Ordered so the speed climbs and the fastest shot comes last. Edit freely.
+# ~1 MINUTE CUT - 07 Nov 2026 rallies
+# These rallies contain 9 shots by you: 81, 80, 71, 67, 66, 63, 62, 59 and 55 km/h
+# (speeds from the SwingVision panel; the 86 / 73 / 69 / 68 / 56 / 53 readings are the
+# opponent's balls). The two weakest (59, 55) are excluded. All 7 remaining shots play in
+# real time, building up in speed, and the 5 fastest get a 0.4x slow-motion replay straight
+# after. Replays are what take the reel to about one minute.
 #
-# Rally_6 is the same rally as Rally_5, exported in vertical 9:16. For a --vertical reel you can
-# swap Rally_5 for Rally_6 on rows 3 and 6 to skip the crop.
+# Rally_6 is the same rally as Rally_5, exported in vertical 9:16.
 #
-filename, start_time, end_time, shot_label, focus
-11-07-2026-Current-Rally_4.MP4, 00:00.30, 00:03.80, Topspin Forehand · 66 km/h, 0.30
-11-07-2026-Current-Rally_3.MP4, 00:03.50, 00:07.00, Topspin Forehand · 67 km/h, 0.40
-11-07-2026-Current-Rally_5.MP4, 00:00.20, 00:03.60, Topspin Backhand · 71 km/h, 0.45
-11-07-2026-Current-Rally_4.MP4, 00:04.05, 00:07.55, Flat Forehand on the Run · 62 km/h, 0.45
-11-07-2026-Current-Rally_4.MP4, 00:07.85, 00:11.35, Flat Forehand · 80 km/h, 0.60
-11-07-2026-Current-Rally_5.MP4, 00:04.40, 00:07.95, Topspin Forehand · 81 km/h, 0.45
+filename, start_time, end_time, shot_label, focus, speed
+11-07-2026-Current-Rally_4.MP4, 00:04.70, 00:07.70, Flat Forehand on the Run · 62 km/h, 0.45
+11-07-2026-Current-Rally_3.MP4, 00:09.50, 00:13.00, Running Forehand · 63 km/h, 0.60
+11-07-2026-Current-Rally_4.MP4, 00:00.20, 00:04.00, Topspin Forehand · 66 km/h, 0.30
+11-07-2026-Current-Rally_4.MP4, 00:01.48, 00:03.38, Topspin Forehand · 66 km/h, 0.30, 0.4
+11-07-2026-Current-Rally_3.MP4, 00:02.80, 00:07.40, Topspin Forehand · 67 km/h, 0.40
+11-07-2026-Current-Rally_3.MP4, 00:04.67, 00:06.57, Topspin Forehand · 67 km/h, 0.40, 0.4
+11-07-2026-Current-Rally_5.MP4, 00:00.20, 00:04.00, Topspin Backhand · 71 km/h, 0.45
+11-07-2026-Current-Rally_5.MP4, 00:01.30, 00:03.20, Topspin Backhand · 71 km/h, 0.45, 0.4
+11-07-2026-Current-Rally_4.MP4, 00:08.40, 00:11.40, Flat Forehand · 80 km/h, 0.60
+11-07-2026-Current-Rally_4.MP4, 00:09.04, 00:10.94, Flat Forehand · 80 km/h, 0.60, 0.4
+11-07-2026-Current-Rally_5.MP4, 00:04.70, 00:08.30, Topspin Forehand · 81 km/h, 0.45
+11-07-2026-Current-Rally_5.MP4, 00:05.62, 00:07.52, Topspin Forehand · 81 km/h, 0.45, 0.4

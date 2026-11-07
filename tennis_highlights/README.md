@@ -24,14 +24,16 @@ python3 highlight_reel.py --vertical  # render tennis_highlights_vertical.mp4 (1
 ## shots.csv
 
 ```
-filename, start_time, end_time, shot_label[, focus]
+filename, start_time, end_time, shot_label[, focus[, speed]]
 match1.mp4, 01:14, 01:21, Inside-Out Forehand Winner
+match1.mp4, 01:16.2, 01:18.1, Inside-Out Forehand Winner, , 0.4
 match1.mp4, 03:02.5, 03:07, "Ace, T serve"
 ```
 
 * `end_time` is the moment the ball **bounces on the other side**. The script adds 0.2 s before `start_time` and 0.5 s after `end_time` for you.
 * Timestamps can be written as `SS`, `SS.ss`, `MM:SS`, `MM:SS.ss` or `HH:MM:SS`.
 * `focus` is optional. It sets the horizontal crop centre from 0 to 1 and only applies when cropping, for example with `--vertical`.
+* `speed` is optional and defaults to 1 (real time). Set it to `0.4` to turn a row into a **slow-motion replay**. Repeat a great shot on the next row with a tight window, roughly 1 s before contact to 0.8 s after. Replays are motion-interpolated to a smooth 60 fps and use deep, pitched-down court audio. Their label kicker reads "SLOW-MO REPLAY". Interpolation is CPU-heavy, about 1–2 minutes per replay on the first render, and the result is cached afterwards. `--fast-slowmo` blends frames instead, which renders in seconds.
 * Rows are rendered in the order they appear in the file. Lines starting with `#` are ignored.
 
 ## What it does

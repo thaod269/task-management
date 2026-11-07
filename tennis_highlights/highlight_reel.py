@@ -6,6 +6,9 @@ Tennis highlight-reel builder (pure ffmpeg, no Python dependencies).
     python3 highlight_reel.py               # render ./shots.csv -> tennis_highlights.mp4
     python3 highlight_reel.py --vertical    # 1080x1920 version for Reels / TikTok / Shorts
 
+Rows with a `speed` below 1 (e.g. 0.4) become slow-motion replays: motion-interpolated to a
+smooth 60 fps with deep, pitched-down court audio and a "SLOW-MO REPLAY" label.
+
 Pipeline
   1. Each row of shots.csv becomes one normalised segment (cached in .highlight_cache/):
        cut [start - lead_in, end + follow_through]  ->  1920x1080 (or 1080x1920) @ 60 fps
@@ -34,7 +37,7 @@ from pathlib import Path
 VIDEO_EXTS = {".mp4", ".mov", ".m4v", ".mkv"}
 MUSIC_NAMES = ["music.mp3", "music.m4a", "music.wav", "music.aac"]
 SAMPLE_RATE = 48000
-CACHE_VERSION = "4"  # bump to invalidate cached segments after changing the render recipe
+CACHE_VERSION = "5"  # bump to invalidate cached segments after changing the render recipe
 
 # Audio targets for court sound. Each clip gets a single linear gain towards TARGET_LUFS; ball
 # strikes are spiky (often 25-30 dB above the room tone), so up to MAX_LIMIT_DB of those peaks may
@@ -43,6 +46,7 @@ CACHE_VERSION = "4"  # bump to invalidate cached segments after changing the ren
 TARGET_LUFS = -18.0
 PEAK_CEILING_DB = -1.5
 MAX_LIMIT_DB = 6.0
+REPLAY_AUDIO_DB = -4.0  # slow-motion rows play pitched-down court audio, slightly quieter
 
 
 # --------------------------------------------------------------------------------------
@@ -226,6 +230,7 @@ class Shot:
     end: float
     label: str
     focus: float = 0.5           # horizontal crop centre 0..1 (used when cropping)
+    speed: float = 1.0           # playback speed; < 1 = slow-motion replay
     clip_start: float = 0.0      # after lead-in / follow-through / clamping
     clip_end: float = 0.0
     frames: int = 0
@@ -235,7 +240,17 @@ class Shot:
 
     @property
     def duration(self) -> float:
+        """Length of the source cut (seconds of footage)."""
         return self.clip_end - self.clip_start
+
+    @property
+    def out_duration(self) -> float:
+        """Length on screen, after any slow motion."""
+        return self.duration / self.speed
+
+    @property
+    def is_replay(self) -> bool:
+        return self.speed < 0.999
 
 
 def load_shots(csv_path: Path, videos_dir: Path) -> list[Shot]:
@@ -251,7 +266,7 @@ def load_shots(csv_path: Path, videos_dir: Path) -> list[Shot]:
         if row[0].lower() in ("filename", "file", "video"):
             continue  # header
         if len(row) < 4:
-            die(f"{csv_path} row {i}: expected `filename, start_time, end_time, shot_label[, focus]`, got {row}")
+            die(f"{csv_path} row {i}: expected `filename, start_time, end_time, shot_label[, focus[, speed]]`, got {row}")
         try:
             start, end = parse_time(row[1]), parse_time(row[2])
         except ValueError as exc:
@@ -264,8 +279,16 @@ def load_shots(csv_path: Path, videos_dir: Path) -> list[Shot]:
                 focus = min(max(float(row[4]), 0.0), 1.0)
             except ValueError:
                 die(f"{csv_path} row {i}: focus must be a number between 0 and 1, got {row[4]!r}")
+        speed = 1.0
+        if len(row) >= 6 and row[5]:
+            try:
+                speed = float(row[5].rstrip("xX"))
+            except ValueError:
+                speed = 0.0
+            if not 0.1 <= speed <= 1.0:
+                die(f"{csv_path} row {i}: speed must be between 0.1 and 1 (e.g. 0.4 for slow-mo), got {row[5]!r}")
         shots.append(Shot(row=i, video=resolve_video(row[0], videos_dir), start=start, end=end,
-                          label=row[3], focus=focus))
+                          label=row[3], focus=focus, speed=speed))
     if not shots:
         die(f"{csv_path} has no shots yet. Add rows like:  match1.mp4, 01:14, 01:21, Forehand Winner")
     return shots
@@ -349,15 +372,16 @@ def measure_audio(shot: Shot) -> tuple[float, float]:
         return (TARGET_LUFS, PEAK_CEILING_DB)
 
 
-def render_segment(shot: Shot, idx: int, total: int, args, W: int, H: int, fps: float,
-                   font: str | None, cache: Path, can_tonemap: bool) -> None:
+def render_segment(shot: Shot, idx: int, total: int, kicker: str, args, W: int, H: int,
+                   fps: float, font: str | None, cache: Path, can_tonemap: bool) -> None:
     info = probe(shot.video)
     key_src = json.dumps([CACHE_VERSION, str(shot.video.resolve()), shot.video.stat().st_mtime,
                           shot.clip_start, shot.clip_end, shot.label, shot.focus, W, H, fps,
-                          args.fit, args.labels, font, idx, total, args.label_seconds])
+                          args.fit, args.labels, font, idx, kicker, args.label_seconds,
+                          shot.speed, args.fast_slowmo if shot.is_replay else None])
     key = hashlib.sha1(key_src.encode()).hexdigest()[:12]
     shot.segment = cache / f"seg_{idx:03d}_{key}.mkv"
-    shot.frames = max(1, round(shot.duration * fps))
+    shot.frames = max(1, round(shot.out_duration * fps))
     name = f"[{idx}/{total}] {shot.label}"
     if shot.segment.exists() and shot.segment.stat().st_size > 0:
         print(f"  {name:<40.40} (cached)")
@@ -372,7 +396,14 @@ def render_segment(shot: Shot, idx: int, total: int, args, W: int, H: int, fps: 
             vchain.append(HDR_TONEMAP)
         else:
             print("  (warning: HDR source but this ffmpeg lacks zscale; colours may look flat)")
-    vchain.append(f"fps={fps:g}")
+    if shot.is_replay:
+        vchain.append(f"setpts=(PTS-STARTPTS)/{shot.speed:.4f}")
+        if args.fast_slowmo:  # cheap: blend neighbouring frames
+            vchain.append(f"framerate=fps={fps:g}")
+        else:  # motion-compensated in-between frames: smooth, but CPU-heavy
+            vchain.append(f"minterpolate=fps={fps:g}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1")
+    else:
+        vchain.append(f"fps={fps:g}")
     vchain.append(fit_filter(info, W, H, args.fit, shot.focus))
     vchain.append("setsar=1,format=yuv420p")
     # clone the last frame if the source runs out early, then cut to an exact frame count
@@ -382,9 +413,9 @@ def render_segment(shot: Shot, idx: int, total: int, args, W: int, H: int, fps: 
     if args.labels and shot.label:
         label_file = cache / f"label_{idx:03d}.txt"
         label_file.write_text(shot.label, encoding="utf-8")
-        hold = min(args.label_seconds, max(shot.duration - args.transition - 0.4, 0.5))
+        hold = min(args.label_seconds, max(shot.out_duration - args.transition - 0.4, 0.5))
         lt_start = args.transition + 0.05  # appear once the incoming transition has settled
-        graph.append(lower_third_filter(label_file, f"SHOT {idx} / {total}", font, W, H, fps,
+        graph.append(lower_third_filter(label_file, kicker, font, W, H, fps,
                                         lt_start, hold))
         graph.append("[base][lt]overlay=0:0:eof_action=pass:format=auto,format=yuv420p[v]")
     else:
@@ -394,8 +425,13 @@ def render_segment(shot: Shot, idx: int, total: int, args, W: int, H: int, fps: 
     ceiling = 10 ** (PEAK_CEILING_DB / 20)
     # pan duplicates mono phone audio to both sides at full level (a plain upmix costs 3 dB)
     upmix = "pan=stereo|c0=c0|c1=c0," if info.audio_channels == 1 else ""
-    achain = (f"aresample={SAMPLE_RATE},{upmix}aformat=sample_fmts=fltp:channel_layouts=stereo,"
-              f"highpass=f=60,volume={shot.gain_db:.2f}dB,"
+    gain = shot.gain_db
+    slow = ""
+    if shot.is_replay:  # classic slow-mo sound: stretched and pitched down together
+        slow = f"asetrate={round(SAMPLE_RATE * shot.speed)},aresample={SAMPLE_RATE},"
+        gain += REPLAY_AUDIO_DB
+    achain = (f"aresample={SAMPLE_RATE},{slow}{upmix}aformat=sample_fmts=fltp:channel_layouts=stereo,"
+              f"highpass=f={40 if shot.is_replay else 60},volume={gain:.2f}dB,"
               f"alimiter=limit={ceiling:.3f}:attack=1:release=40:level=disabled,"
               f"apad,atrim=end_sample={samples},asetpts=PTS-STARTPTS[a]")
     cmd = ["ffmpeg", "-y", "-ss", f"{shot.clip_start:.3f}", "-t", f"{shot.duration + 0.5:.3f}",
@@ -480,7 +516,7 @@ TEMPLATE_HEADER = """\
 # ---------------------------------------------------------------------------------
 # One row per shot, in the order they should appear in the reel:
 #
-#   filename, start_time, end_time, shot_label[, focus]
+#   filename, start_time, end_time, shot_label[, focus[, speed]]
 #
 #   filename    file inside ./raw_videos/ (case-insensitive; extension optional)
 #   start_time  just before the shot starts (split step / unit turn)
@@ -490,11 +526,14 @@ TEMPLATE_HEADER = """\
 #               (wrap it in "double quotes" if it contains a comma)
 #   focus       optional 0.0-1.0 horizontal crop centre, only used when cropping
 #               (e.g. --vertical): 0 = keep the left edge, 0.5 = centre, 1 = right edge
+#   speed       optional playback speed, 1 = real time (default). Use 0.4 for a smooth
+#               slow-motion replay: repeat a great shot on the next row with a tight window
+#               around contact (about 1 s before to 0.8 s after) and speed 0.4
 #
 # Timestamps: SS, SS.ss, MM:SS, MM:SS.ss or HH:MM:SS. Lines starting with # are ignored.
 # Aim for 4-7 s per shot (including the padding) to keep the reel punchy.
 # ---------------------------------------------------------------------------------
-filename, start_time, end_time, shot_label, focus
+filename, start_time, end_time, shot_label, focus, speed
 """
 
 
@@ -536,6 +575,9 @@ def main() -> None:
     ap.add_argument("--transition", type=float, default=0.3, help="transition length in seconds")
     ap.add_argument("--transition-style", choices=["dip", "dissolve"], default="dip",
                     help="dip = dip-to-black, dissolve = cross-dissolve")
+    ap.add_argument("--fast-slowmo", action="store_true",
+                    help="blend frames for slow-motion rows instead of motion interpolation "
+                         "(much faster to render, slightly ghosty)")
     ap.add_argument("--no-labels", dest="labels", action="store_false", help="disable lower-third labels")
     ap.add_argument("--label-seconds", type=float, default=1.5, help="how long each label stays on screen")
     ap.add_argument("--music", default=None, help="background track (default: raw_videos/music.mp3 if present)")
@@ -579,7 +621,7 @@ def main() -> None:
     print(f"Fit: {args.fit}   Transition: {args.transition}s {args.transition_style}   "
           f"Labels: {'on' if args.labels else 'off'}   "
           f"Music: {f'{music.name} @ {args.music_volume:.0%}' if music else 'none (add raw_videos/music.mp3)'}\n")
-    print(f"  {'#':>2}  {'video':<32} {'cut (with padding)':<22} {'len':>5}  label")
+    print(f"  {'#':>2}  {'video':<32} {'cut (with padding)':<22} {'len':>5} {'speed':>5}  label")
     for i, s in enumerate(shots, 1):
         info = probe(s.video)
         s.clip_start = max(0.0, s.start - args.lead_in)
@@ -591,14 +633,15 @@ def main() -> None:
         if s.start >= info.duration:
             die(f"shot {i} ({s.label}) starts at {fmt_time(s.start)} but {s.video.name} is only "
                 f"{fmt_time(info.duration)} long")
-        if s.duration > 8:
+        if s.out_duration > 8:
             warn = "  <- long; consider trimming for pace"
-        elif s.duration < 3:
+        elif s.out_duration < 3:
             warn = "  <- short"
         print(f"  {i:>2}  {s.video.name:<32.32} {fmt_time(s.clip_start)}-{fmt_time(s.clip_end)}    "
-              f"{s.duration:4.1f}s  {s.label}{warn}")
-    est = sum(s.duration for s in shots) - args.transition * (len(shots) - 1)
-    print(f"\n  Estimated reel length: {est:.1f}s")
+              f"{s.out_duration:4.1f}s {s.speed:4.2g}x  {s.label}{warn}")
+    est = sum(s.out_duration for s in shots) - args.transition * (len(shots) - 1)
+    n_live = sum(not s.is_replay for s in shots)
+    print(f"\n  Estimated reel length: {est:.1f}s  ({n_live} shots, {len(shots) - n_live} slow-mo replays)")
     if args.dry_run:
         return
 
@@ -611,8 +654,17 @@ def main() -> None:
 
     t0 = time.time()
     print(f"\nStage 1/2 - cutting & normalising shots{f' (font: {Path(font).name})' if font else ''}")
+    if any(s.is_replay for s in shots) and not args.fast_slowmo:
+        print("  (slow-mo replays use motion interpolation - expect ~1-2 min each the first time; "
+              "they're cached afterwards. --fast-slowmo renders them quickly)")
+    shot_no = 0
     for i, s in enumerate(shots, 1):
-        render_segment(s, i, len(shots), args, W, H, fps, font, cache, can_tonemap)
+        if s.is_replay:
+            kicker = f"SLOW-MO REPLAY  ·  {s.speed:g}×"
+        else:
+            shot_no += 1
+            kicker = f"SHOT {shot_no} / {n_live}"
+        render_segment(s, i, len(shots), kicker, args, W, H, fps, font, cache, can_tonemap)
 
     print("\nStage 2/2 - transitions, audio mix & final encode")
     total = assemble(shots, args, W, H, fps, music, output)
