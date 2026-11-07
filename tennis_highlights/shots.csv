@@ -8,7 +8,7 @@
 #   start_time  just before the shot starts (split step / unit turn)
 #   end_time    the moment the ball BOUNCES on the other side
 #               (the script adds a 0.2 s lead-in and 0.5 s follow-through for you)
-#   shot_label  text for the lower-third, e.g. Forehand Winner, Ace, Backhand Down-the-Line
+#   shot_label  a name for the shot (shown on screen only with --labels)
 #               (wrap it in "double quotes" if it contains a comma)
 #   focus       optional 0.0-1.0 horizontal crop centre, only used when cropping
 #               (e.g. --vertical): 0 = keep the left edge, 0.5 = centre, 1 = right edge
@@ -20,25 +20,26 @@
 # Aim for 4-7 s per shot (including the padding) to keep the reel punchy.
 # ---------------------------------------------------------------------------------
 #
-# ~1 MINUTE CUT - 07 Nov 2026 rallies
+# CLEAN CUT - 07 Nov 2026 rallies: real time only, no on-screen text
 # These rallies contain 9 shots by you: 81, 80, 71, 67, 66, 63, 62, 59 and 55 km/h
 # (speeds from the SwingVision panel; the 86 / 73 / 69 / 68 / 56 / 53 readings are the
-# opponent's balls). The two weakest (59, 55) are excluded. All 7 remaining shots play in
-# real time, building up in speed, and the 5 fastest get a 0.4x slow-motion replay straight
-# after. Replays are what take the reel to about one minute.
+# opponent's balls). The two weakest (59, 55) are excluded; the other 7 build up in speed.
 #
-# Rally_6 is the same rally as Rally_5, exported in vertical 9:16.
+# Duplicates: Rally_6 (vertical 9:16) and Rally_17 (square) are the same rally as Rally_5.
+# Rally_5 is used here because it is native 16:9; for --vertical, Rally_6 fits best.
 #
 filename, start_time, end_time, shot_label, focus, speed
 11-07-2026-Current-Rally_4.MP4, 00:04.70, 00:07.70, Flat Forehand on the Run · 62 km/h, 0.45
 11-07-2026-Current-Rally_3.MP4, 00:09.50, 00:13.00, Running Forehand · 63 km/h, 0.60
 11-07-2026-Current-Rally_4.MP4, 00:00.20, 00:04.00, Topspin Forehand · 66 km/h, 0.30
-11-07-2026-Current-Rally_4.MP4, 00:01.48, 00:03.38, Topspin Forehand · 66 km/h, 0.30, 0.4
 11-07-2026-Current-Rally_3.MP4, 00:02.80, 00:07.40, Topspin Forehand · 67 km/h, 0.40
-11-07-2026-Current-Rally_3.MP4, 00:04.67, 00:06.57, Topspin Forehand · 67 km/h, 0.40, 0.4
 11-07-2026-Current-Rally_5.MP4, 00:00.20, 00:04.00, Topspin Backhand · 71 km/h, 0.45
-11-07-2026-Current-Rally_5.MP4, 00:01.30, 00:03.20, Topspin Backhand · 71 km/h, 0.45, 0.4
 11-07-2026-Current-Rally_4.MP4, 00:08.40, 00:11.40, Flat Forehand · 80 km/h, 0.60
-11-07-2026-Current-Rally_4.MP4, 00:09.04, 00:10.94, Flat Forehand · 80 km/h, 0.60, 0.4
 11-07-2026-Current-Rally_5.MP4, 00:04.70, 00:08.30, Topspin Forehand · 81 km/h, 0.45
-11-07-2026-Current-Rally_5.MP4, 00:05.62, 00:07.52, Topspin Forehand · 81 km/h, 0.45, 0.4
+#
+# Optional 0.4x slow-motion replays (remove the leading "# " to bring one back):
+# 11-07-2026-Current-Rally_4.MP4, 00:01.48, 00:03.38, Topspin Forehand · 66 km/h, 0.30, 0.4
+# 11-07-2026-Current-Rally_3.MP4, 00:04.67, 00:06.57, Topspin Forehand · 67 km/h, 0.40, 0.4
+# 11-07-2026-Current-Rally_5.MP4, 00:01.30, 00:03.20, Topspin Backhand · 71 km/h, 0.45, 0.4
+# 11-07-2026-Current-Rally_4.MP4, 00:09.04, 00:10.94, Flat Forehand · 80 km/h, 0.60, 0.4
+# 11-07-2026-Current-Rally_5.MP4, 00:05.62, 00:07.52, Topspin Forehand · 81 km/h, 0.45, 0.4

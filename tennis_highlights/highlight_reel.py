@@ -578,7 +578,8 @@ def main() -> None:
     ap.add_argument("--fast-slowmo", action="store_true",
                     help="blend frames for slow-motion rows instead of motion interpolation "
                          "(much faster to render, slightly ghosty)")
-    ap.add_argument("--no-labels", dest="labels", action="store_false", help="disable lower-third labels")
+    ap.add_argument("--labels", action="store_true",
+                    help="show a lower-third with each row's shot_label (off by default: clean footage)")
     ap.add_argument("--label-seconds", type=float, default=1.5, help="how long each label stays on screen")
     ap.add_argument("--music", default=None, help="background track (default: raw_videos/music.mp3 if present)")
     ap.add_argument("--music-volume", type=float, default=0.25, help="music level relative to court audio (0.2-0.3)")

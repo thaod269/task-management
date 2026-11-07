@@ -42,7 +42,7 @@ match1.mp4, 03:02.5, 03:07, "Ace, T serve"
 |---|---|
 | Cut | Frame-accurate cut of `[start − 0.2 s, end + 0.5 s]`, clamped to the clip length |
 | Normalise | 1920×1080 at 60 fps (`--fps native` keeps the source rate). Clips with a different aspect ratio get a blurred fill of the same footage (`--fit blur`). You can use `crop` or `pad` instead. With `--vertical`, the output is 1080×1920 and crops by default. HDR iPhone footage is tone-mapped to SDR. |
-| Label | Lower-third with a "SHOT n / N" kicker above the shot label. It fades in once the transition has finished and stays for 1.5 s (`--label-seconds`, `--no-labels`). |
+| Label | Off by default, so the footage stays clean. With `--labels`, each shot gets a lower-third with a "SHOT n / N" kicker above the shot label. It fades in once the transition has finished and stays for 1.5 s (`--label-seconds`). |
 | Court audio | A 60 Hz high-pass removes rumble. Each clip then gets one linear gain towards −18 LUFS, and a 1 ms limiter trims at most 6 dB off the strike peaks. Racket pops stay crisp and every clip plays at a similar level. |
 | Transitions | 0.3 s dip-to-black (`--transition-style dissolve` gives a cross-dissolve) plus a matching audio crossfade |
 | Music | If `raw_videos/music.mp3` exists (or you pass `--music path`), it is looped or trimmed to the reel's length, faded, and mixed in at 25 % (`--music-volume 0.2`–`0.3`). Court audio stays at 100 %. |
