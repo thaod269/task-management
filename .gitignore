@@ -35,3 +35,9 @@ yarn-error.log*
 # editors
 .vscode/
 .idea/
+
+# tennis highlight reel: large media + render cache stay local
+tennis_highlights/raw_videos/*
+!tennis_highlights/raw_videos/.gitkeep
+tennis_highlights/.highlight_cache/
+tennis_highlights/*.mp4
